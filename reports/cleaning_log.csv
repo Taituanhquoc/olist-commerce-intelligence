@@ -1,0 +1,11 @@
+step,table,action,rows_before,rows_after,rows_affected,decision
+1,orders,Drop duplicate order_id,99441,99441,0,Order grain must be unique; keep earliest.
+2,orders,Keep purchases 2017-01-01 to 2018-08-31,99441,99092,349,Months outside the window are partial (data collection start/end) and distort MoM growth.
+3,orders,Exclude canceled and unavailable orders,99092,97910,1182,These orders generated no revenue; counting them would overstate demand.
+4,products,Translate two categories missing from the translation file,32951,32951,13,pc_gamer and portateis_cozinha_e_preparadores_de_alimentos mapped by hand.
+5,products,Label products with no category as 'unknown',32951,32951,610,Kept: their revenue is real; dropping them would understate totals.
+6,orders,Drop orders with no order items,97910,97905,5,"No items means no revenue or category; these are data gaps, not sales."
+7,order_reviews,Keep the latest review per order,99224,98673,551,Some orders carry several reviews; the latest answer reflects the final experience.
+8,orders,Treat 'delivered' orders with no delivery date as not delivered,97905,97905,8,Delivery time and lateness cannot be measured without the date.
+9,orders,Flag (not drop) carrier pickup timestamps earlier than purchase,97905,97905,166,Timestamp noise in an unused field; customer delivery dates are consistent.
+10,order_items,Keep high-price items above the 99.9th percentile,111752,111752,111,"Prices up to R$6,735 are plausible (furniture, electronics); not errors."

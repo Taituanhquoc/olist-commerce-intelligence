@@ -1,0 +1,91 @@
+{%- set k = a.kpi -%}{%- set t = a.trend -%}{%- set d = a.delivery -%}{%- set i = a.impact -%}{%- set as_ = a.assumptions -%}{%- set rv = a.retention_vs_delivery -%}
+# Insights and recommendations
+
+Each insight follows the same chain: finding, evidence (values from `reports/facts.json`), why it matters, the recommended action,
+and an impact estimate with its assumptions. Real data: Olist public dataset, {{ k.orders | num }} orders, Jan 2017 to Aug 2018.
+
+---
+
+## 1. Year-on-year growth hides a flat 2018
+
+- **Finding.** Revenue stopped growing in 2018 even though the YoY figure looks excellent.
+- **Evidence.** Jan-Aug revenue {{ t.revenue_2017_jan_aug | brl(2) }} (2017) vs {{ t.revenue_2018_jan_aug | brl(2) }} (2018), +{{ t.yoy_revenue_growth | pct(0) }}.
+  Average MoM growth fell from {{ t.avg_mom_growth_2017 | pct }} (2017) to {{ t.avg_mom_growth_2018 | pct }} (2018); the fitted 2018 trend is
+  {{ t.trend_slope_2018_pct | pct }} a month; May-Aug averaged {{ e.avg_monthly_revenue_2018_may_aug | brl }} vs {{ e.avg_monthly_revenue_2018_jan_apr | brl }} in Jan-Apr.
+- **So what.** Reporting YoY alone would tell leadership the business is healthy at the moment it stalled.
+- **Action.** Report a trailing three-month run-rate and MoM next to YoY on the executive dashboard.
+- **Impact.** No direct revenue; it changes which problem gets attention first.
+
+## 2. Growth is acquisition-only: {{ k.one_time_share | pct(0) }} of customers buy once
+
+- **Finding.** Customers almost never return.
+- **Evidence.** Repeat purchase rate {{ k.repeat_rate | pct(2) }}; month-1 cohort retention {{ a.cohort.month1_retention | pct(2) }};
+  {{ a.cohort.repeat_within_180d | pct }} of customers reorder within {{ as_.repeat_window_days }} days; repeat orders are {{ a.cohort.repeat_revenue_share | pct }} of revenue.
+- **So what.** With new customers flat at about {{ e.avg_new_customers_2018 | num }} a month, revenue cannot grow without a retention lever.
+- **Action.** Second-purchase programme: post-delivery voucher plus recommendations matched to the first purchase category.
+- **Impact.** {{ i.a1_repeat_revenue | brl }} a year at +{{ as_.repeat_lift_pp | sig(1) }} pp repeat rate ({{ i.annual_new_customers | num }} new customers a year x
+  {{ as_.repeat_lift_pp | sig(1) }} pp x {{ i.avg_repeat_order_revenue | money }} per repeat order). Range {{ i.a1_low | brl }} to {{ i.a1_high | brl }}.
+
+## 3. The value pool is high-value one-time buyers
+
+- **Finding.** Two RFM segments of one-time buyers hold most of the revenue.
+- **Evidence.** Promising ({{ a.rfm.segments.Promising.customers | num }} customers) and At-Risk ({{ a.rfm.segments['At-Risk'].customers | num }}) are
+  {{ a.rfm.high_value_one_timers_customer_share | pct(0) }} of customers and {{ a.rfm.high_value_one_timers_revenue_share | pct(0) }} of revenue, spending about
+  {{ a.rfm.segments.Promising.avg_revenue | money }} each against {{ a.rfm.segments['New Customers'].avg_revenue | money }} for low-value New Customers.
+- **So what.** A blanket retention campaign wastes budget on low-value buyers.
+- **Action.** Target insight 2's programme at Promising first (recent), then At-Risk (lapsing), with a win-back offer for At-Risk.
+- **Impact.** Included in insight 2; targeting raises the value per converted customer.
+
+## 4. Late delivery is the biggest driver of bad reviews
+
+- **Finding.** Reviews collapse as soon as an order misses its promised date.
+- **Evidence.** {{ d.late_avg_review | sig }} vs {{ d.ontime_avg_review | sig }} stars, gap {{ d.review_gap | sig }} ({{ as_.ci_level_pct }}% CI {{ d.review_gap_ci_low | sig }}
+  to {{ d.review_gap_ci_high | sig }}); Mann-Whitney U p < {{ as_.p_floor }}, rank-biserial {{ d.rank_biserial | sig }}.
+  {{ d.late_low_review_share | pct(0) }} of late orders get 1-2 stars vs {{ d.ontime_low_review_share | pct(0) }} of on-time orders.
+- **So what.** Review score is public on the marketplace; every late order is a visible 1-2 star rating.
+- **Action.** Recalibrate promised delivery dates by state (a promise the carrier can keep), and alert sellers before the promise is breached.
+- **Impact.** See insight 5.
+
+## 5. Lateness is concentrated: {{ a.state.target_share_of_delivered | pct(0) }} of deliveries produce {{ a.state.target_share_of_late | pct(0) }} of late orders
+
+- **Finding.** Lateness is geographic.
+- **Evidence.** {% for s in a.state.worst5 %}{{ s.state }} {{ s.late_rate | pct }}{% if not loop.last %}, {% endif %}{% endfor %} late
+  (national {{ k.late_rate | pct }}). The {{ a.state.n_target_states }} states above the national rate receive {{ a.state.target_share_of_delivered | pct(0) }} of deliveries but hold {{ a.state.target_share_of_late | pct(0) }} of late orders;
+  RJ alone has {{ a.state.rj_late_orders | num }} ({{ a.state.rj_share_of_late | pct(0) }}).
+- **So what.** A targeted fix in a few lanes moves the national number.
+- **Action.** Carrier review for North-East states and RJ; state-specific delivery estimates.
+- **Impact.** Bringing these states to the national rate avoids about {{ i.a2_late_orders_avoided | num }} late orders a year and lifts the platform review average by
+  about {{ i.a2_review_uplift | sig }} stars. Direct repeat revenue is small ({{ i.a2_repeat_revenue | money(0) }}), because a late first order lowers repeat
+  rate only from {{ rv.repeat_rate_ontime_first | pct(2) }} to {{ rv.repeat_rate_late_first | pct(2) }} (p = {{ rv.p_value | sig(3) }}).
+
+## 6. Baskets are single-item
+
+- **Finding.** Customers rarely add a second item.
+- **Evidence.** {{ i.a3_multi_item_share | pct }} of orders have more than one item; {{ k.items_per_order | sig }} items per order; an add-on is worth
+  {{ i.a3_avg_addon_revenue | money }} on average.
+- **So what.** AOV has been flat ({{ t.yoy_aov_growth | pct }} YoY), so basket building is the cheapest growth lever after retention.
+- **Action.** "Bought together" bundles at checkout in the top five categories; free-freight threshold tests.
+- **Impact.** {{ i.a3_basket_revenue | brl }} a year at +{{ as_.basket_lift_pp | sig(1) }} pp multi-item share ({{ i.annual_orders | num }} orders x
+  {{ as_.basket_lift_pp | sig(1) }} pp x {{ i.a3_avg_addon_revenue | money }}).
+
+## 7. Revenue depends on a few categories and sellers
+
+- **Finding.** Concentration risk.
+- **Evidence.** Top 10 of {{ a.category.n_categories }} categories = {{ a.category.top10_share | pct(0) }} of revenue; top 10% of sellers = {{ a.category.top10pct_sellers_share | pct(0) }};
+  top 20% = {{ a.category.top20pct_sellers_share | pct(0) }}.
+- **So what.** Losing a handful of large sellers would hurt more than any seasonal dip.
+- **Action.** Key-account management for the top seller decile; seller performance SLAs on delivery time.
+- **Impact.** Risk reduction; not sized.
+
+## 8. Installments go with bigger baskets (correlation)
+
+- **Finding.** Order value rises with the number of credit-card installments.
+- **Evidence.** {{ a.payment.aov_single_payment | money }} single payment vs {{ a.payment.aov_7plus_installments | money }} at 7+ installments;
+  Spearman rho {{ a.payment.spearman_installments_value | sig }}. Credit card is {{ a.payment.credit_card_share | pct(0) }} of orders.
+- **So what.** Installments probably enable high-ticket purchases, but big baskets may simply choose installments; the data cannot separate the two.
+- **Action.** Test showing the installment price ("10x R$...") on high-ticket product pages before investing further.
+- **Impact.** Not sized: needs an experiment.
+
+---
+
+**Total sized impact:** {{ i.total_revenue | brl }} a year ({{ i.total_share_of_annual | pct }} of annualised 2018 revenue of {{ t.annualised_revenue_2018 | brl }}).

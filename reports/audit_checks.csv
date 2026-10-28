@@ -1,0 +1,19 @@
+check,count
+duplicate order_id in orders,0
+"duplicate (order_id, order_item_id) in order_items",0
+orders with more than one review,547
+duplicate review_id rows,814
+order_items with no matching order,0
+orders with no order_items,775
+orders with no payment row,1
+orders whose customer_id is missing from customers,0
+items whose product_id is missing from products,0
+products with no category,610
+categories with no English translation,2
+status 'delivered' but no delivery date,8
+carrier pickup recorded before purchase,166
+delivery recorded before purchase,0
+items with price <= 0,0
+payments with value 0,9
+geolocation points outside Brazil's bounding box,42
+orders purchased outside the analysis window,349

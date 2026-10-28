@@ -1,0 +1,44 @@
+{%- set k = a.kpi -%}{%- set t = a.trend -%}{%- set d = a.delivery -%}{%- set i = a.impact -%}{%- set as_ = a.assumptions -%}
+# Executive summary: why growth stalled and what to do about it
+
+*Olist marketplace, real public data, {{ k.orders | num }} orders from Jan 2017 to Aug 2018. All figures come from `reports/facts.json`.*
+
+## The situation
+
+The marketplace sold {{ k.revenue | brl }} of goods in twenty months. On paper growth is strong: Jan-Aug revenue was up
+{{ t.yoy_revenue_growth | pct(0) }} on the same months of 2017. That comparison flatters the business, because 2017 was the
+ramp-up year. In 2018 monthly revenue stopped climbing: it averaged {{ e.avg_monthly_revenue_2018_may_aug | brl }} a month in May-Aug,
+{{ e.run_rate_change_2018 | pct | replace("-", "") }} below Jan-Apr.
+
+## Why
+
+1. **Almost nobody comes back.** Only {{ k.repeat_rate | pct }} of customers ever placed a second order, and repeat orders are
+   {{ a.cohort.repeat_revenue_share | pct }} of revenue. Nearly every real of revenue comes from a first-time buyer.
+2. **New-customer growth has stopped.** First-time customers levelled off at about {{ e.avg_new_customers_2018 | num }} a month in 2018.
+   With flat acquisition and no retention, revenue goes flat.
+3. **Basket size is not growing either.** Average order value moved {{ t.yoy_aov_growth | pct }} year on year, and only
+   {{ i.a3_multi_item_share | pct }} of orders contain more than one item.
+4. **Late deliveries damage the experience.** {{ k.late_rate | pct }} of delivered orders arrive late. Those orders average
+   {{ d.late_avg_review | sig }} stars against {{ d.ontime_avg_review | sig }} for on-time orders. The {{ a.state.n_target_states }} states with above-average
+   late rates receive {{ a.state.target_share_of_delivered | pct(0) }} of deliveries but {{ a.state.target_share_of_late | pct(0) }} of late ones; Rio de Janeiro alone
+   accounts for {{ a.state.rj_share_of_late | pct(0) }}.
+
+## What to do
+
+| Action | Who it targets | Estimated value per year |
+|---|---|---|
+| Second-purchase programme | {{ a.rfm.high_value_one_timers | num }} high-value one-time buyers (Promising, At-Risk) | {{ i.a1_repeat_revenue | brl }} at +{{ as_.repeat_lift_pp | sig(1) }} pp repeat rate |
+| Fix delivery promises | {{ a.state.n_target_states }} states above the national late rate | {{ i.a2_late_orders_avoided | num }} fewer late orders, +{{ i.a2_review_uplift | sig }} average stars |
+| Cross-sell bundles | All checkouts in top categories | {{ i.a3_basket_revenue | brl }} at +{{ as_.basket_lift_pp | sig(1) }} pp multi-item share |
+
+Together the three actions are worth about **{{ i.total_revenue | brl }} a year**, or {{ i.total_share_of_annual | pct }} of the
+2018 run-rate. That is a modest number, and it should be read honestly: the lifts are assumptions to be tested, not promises.
+The bigger point is structural. A marketplace where {{ k.one_time_share | pct(0) }} of buyers never return cannot grow faster than its
+acquisition budget, so retention has to become a managed metric.
+
+## Recommended next steps
+
+1. Launch the second-purchase programme as an A/B test on next month's Promising and At-Risk customers; read repeat rate after {{ as_.repeat_window_days }} days.
+2. Agree delivery-promise targets per state with the logistics team; track on-time rate weekly on the dashboard.
+3. Add a "bought together" module in the top five categories and measure multi-item share.
+4. Add product cost to the data so the next analysis can rank categories by profit, not revenue.

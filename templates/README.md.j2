@@ -1,0 +1,109 @@
+{%- set k = a.kpi -%}{%- set t = a.trend -%}{%- set d = a.delivery -%}{%- set i = a.impact -%}{%- set as_ = a.assumptions -%}
+# E-Commerce Sales, Customer and Delivery Analytics (Olist, real data)
+
+**Live dashboard:** {{ pages_url }} · **Data:** Olist Brazilian E-Commerce public dataset, {{ k.orders | num }} real orders, Jan 2017 to Aug 2018
+
+> **Headline: growth has stalled because the business only acquires.** Jan-Aug revenue grew {{ t.yoy_revenue_growth | pct(0) }} year on year,
+> but the 2018 monthly run-rate is flat (May-Aug averaged {{ e.avg_monthly_revenue_2018_may_aug | brl }} a month against
+> {{ e.avg_monthly_revenue_2018_jan_apr | brl }} in Jan-Apr). New customers stopped growing at about {{ e.avg_new_customers_2018 | num }} a month,
+> only {{ k.repeat_rate | pct }} of customers ever order twice, and late deliveries cut the average review from {{ d.ontime_avg_review | sig }}
+> to {{ d.late_avg_review | sig }} stars. Three actions below are worth an estimated **{{ i.total_revenue | brl }} a year**
+> ({{ i.total_share_of_annual | pct }} of annualised 2018 revenue) under stated assumptions.
+
+![Executive overview](reports/figures/dashboard_overview.png)
+
+## Key numbers
+
+| Metric | Value | Definition |
+|---|---|---|
+| Revenue | {{ k.revenue | brl(2) }} | Sum of item prices, excluding freight ({{ k.freight | brl(2) }} freight on top) |
+| Orders | {{ k.orders | num }} | Orders in the window, excluding canceled and unavailable |
+| Customers | {{ k.customers | num }} | Distinct `customer_unique_id` |
+| Average order value | {{ k.aov | money }} | Revenue / orders |
+| Repeat purchase rate | {{ k.repeat_rate | pct(2) }} | Customers with 2+ orders / all customers |
+| On-time delivery | {{ k.on_time_rate | pct }} | Delivered on or before the promised date |
+| Average delivery time | {{ k.avg_delivery_days | sig(1) }} days | Purchase to customer receipt |
+| Average review | {{ k.avg_review | sig }} / 5 | Latest review per order |
+
+## What holds back growth, and three actions
+
+| # | Action | Evidence | Estimated annual impact |
+|---|---|---|---|
+| 1 | **Second-purchase programme** aimed at Promising and At-Risk one-time buyers (post-delivery voucher, category-matched recommendations) | {{ a.rfm.high_value_one_timers | num }} high-value one-time buyers are {{ a.rfm.high_value_one_timers_customer_share | pct(0) }} of customers but {{ a.rfm.high_value_one_timers_revenue_share | pct(0) }} of revenue; month-1 retention is {{ a.cohort.month1_retention | pct(2) }} | **{{ i.a1_repeat_revenue | brl }}** if repeat rate rises {{ as_.repeat_lift_pp | sig(1) }} pp (range {{ i.a1_low | brl }} to {{ i.a1_high | brl }} for {{ as_.repeat_lift_low_pp | sig(1) }} to {{ as_.repeat_lift_high_pp | sig(1) }} pp) |
+| 2 | **Fix delivery promises in the {{ a.state.n_target_states }} states above the national late rate** (carrier mix, realistic ETAs for the North-East and RJ) | These states receive {{ a.state.target_share_of_delivered | pct(0) }} of deliveries but {{ a.state.target_share_of_late | pct(0) }} of late orders; RJ alone holds {{ a.state.rj_share_of_late | pct(0) }}; late orders average {{ d.late_avg_review | sig }} stars | **{{ i.a2_late_orders_avoided | num }} fewer late orders a year** and +{{ i.a2_review_uplift | sig }} on the platform review average; direct repeat revenue is small ({{ i.a2_repeat_revenue | money(0) }}) |
+| 3 | **Cross-sell to build baskets** in the top categories ("bought together" bundles at checkout) | Only {{ i.a3_multi_item_share | pct }} of orders have more than one item; an add-on is worth {{ i.a3_avg_addon_revenue | money }} on average | **{{ i.a3_basket_revenue | brl }}** if multi-item share rises {{ as_.basket_lift_pp | sig(1) }} pp |
+
+Assumptions: annual volumes use the 2018 run-rate ({{ i.annual_new_customers | num }} new customers and {{ i.annual_orders | num }} orders a year);
+a repeat order is worth {{ i.avg_repeat_order_revenue | money }} (observed average). The lifts are planning assumptions, not measured effects: run each action as an A/B test
+before scaling. The impact model is live in `excel/olist_ecommerce_kpis.xlsx` (sheet *Impact model*) so the assumptions can be changed.
+
+## Answers to the seven business questions
+
+1. **Trend.** Revenue rose from {{ e.revenue_jan_2017 | brl }} in Jan 2017 to a Black-Friday peak of {{ e.peak_month_revenue | brl(2) }} in Nov 2017, then flattened.
+   Average month-on-month growth fell from {{ t.avg_mom_growth_2017 | pct }} in 2017 to {{ t.avg_mom_growth_2018 | pct }} in 2018. The YoY gain is all volume
+   (orders {{ t.yoy_orders_growth | pct(0) }}, AOV {{ t.yoy_aov_growth | pct }}).
+   ![Monthly revenue](reports/figures/01_monthly_revenue.png)
+2. **Categories and sellers.** The top 10 of {{ a.category.n_categories }} categories carry {{ a.category.top10_share | pct(0) }} of revenue, the bottom half only
+   {{ a.category.bottom_half_share | pct }}. The top 10% of {{ a.category.n_sellers | num }} sellers earn {{ a.category.top10pct_sellers_share | pct(0) }}.
+   Largest category: {{ a.category.top5[0].category | replace("_", " ") }} ({{ a.category.top5[0].share | pct }}).
+3. **RFM segments.** Champions and Loyal (the only repeat buyers) are {{ a.rfm.repeat_segments_customer_share | pct }} of customers. Promising and At-Risk
+   one-time buyers are the value pool: {{ a.rfm.high_value_one_timers_revenue_share | pct(0) }} of revenue.
+   ![RFM segments](reports/figures/07_rfm_segments.png)
+4. **Cohorts and repeat purchase.** No cohort retains more than {{ a.cohort.max_cell_retention_after_m0 | pct }} in any later month;
+   {{ a.cohort.repeat_within_180d | pct }} of customers buy again within {{ as_.repeat_window_days }} days, and repeat orders are {{ a.cohort.repeat_revenue_share | pct }} of revenue.
+   ![Cohort heatmap](reports/figures/08_cohort_heatmap.png)
+5. **Late delivery vs review.** Late orders average {{ d.late_avg_review | sig }} stars against {{ d.ontime_avg_review | sig }} on time, a gap of
+   {{ d.review_gap | sig }} stars ({{ as_.ci_level_pct }}% CI {{ d.review_gap_ci_low | sig }} to {{ d.review_gap_ci_high | sig }}). Mann-Whitney U: p < {{ as_.p_floor }},
+   rank-biserial effect size {{ d.rank_biserial | sig }} (large). Orders 8+ days late average {{ d.late8_avg_review | sig }} stars and {{ d.late8_low_review_share | pct(0) }}
+   of their reviews are 1-2 stars.
+   ![Delay vs review](reports/figures/09_delay_vs_review.png)
+6. **Logistics by state.** Worst late rates: {% for s in a.state.worst5[:3] %}{{ s.state }} {{ s.late_rate | pct }}{% if not loop.last %}, {% endif %}{% endfor %}
+   (national {{ k.late_rate | pct }}). RJ combines volume with a high rate ({{ a.state.rj_late_rate | pct }}): {{ a.state.rj_late_orders | num }} late orders,
+   second only to SP ({{ a.state.sp_late_orders | num }}), whose rate is just {{ a.state.sp_late_rate | pct }}.
+   ![State late rate](reports/figures/10_state_late_rate.png)
+7. **Payment mix.** Credit card pays for {{ a.payment.credit_card_share | pct(0) }} of orders, boleto {{ a.payment.boleto_share | pct(0) }}. Credit-card order value rises with
+   installments, from {{ a.payment.aov_single_payment | money }} (single payment) to {{ a.payment.aov_7plus_installments | money }} (7+), Spearman
+   rho {{ a.payment.spearman_installments_value | sig }}. This is a correlation, not proof that installments cause bigger baskets.
+
+More detail: [executive summary](reports/executive_summary.md) · [insights and recommendations](reports/insights_and_recommendations.md) ·
+[assumptions and cleaning log](docs/assumptions.md) · [project brief](docs/project_brief.md) · [interview notes](docs/interview_talking_points.md)
+
+## What is in the repo
+
+| Path | Contents |
+|---|---|
+| `sql/` | `00_schema` (typed raw layer + indexes), `01_staging_clean` (dedup, flags), `02_analysis_views` (star schema: `fact_order_items`, `fact_orders`, `dim_customer/product/seller/date/geo`; cohort, RFM with `NTILE`, MoM/YoY with `LAG`, top-N with `ROW_NUMBER`), `03_kpi_queries` |
+| `src/` | Pipeline: download, warehouse build (DuckDB), audit, cleaning, EDA, analysis, Excel, dashboard, reports |
+| `notebooks/` | `01_audit`, `02_cleaning`, `03_eda`, `04_analysis`, executed with outputs |
+| `excel/olist_ecommerce_kpis.xlsx` | Formula-driven KPI workbook: summary, monthly MoM/YoY, category Pareto, state logistics, RFM, payments, impact model with inputs and sensitivity |
+| `dashboard/index.html` | Self-contained Plotly dashboard (works offline), also served by GitHub Pages from `docs/` |
+| `powerbi/` | Data model, {{ powerbi_measures }} DAX measures, theme, page layout and a click-by-click build guide (no `.pbix` is committed) |
+| `reports/` | `facts.json` (every published number), executive summary, insights, figures, SQL outputs |
+| `tests/` | Data-quality and metric tests: SQL, Python, Excel and dashboard totals must agree |
+
+## Run it
+
+```bash
+python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+make all        # download -> warehouse -> audit -> clean -> eda -> analysis -> excel -> dashboard -> reports -> notebooks -> test -> check
+```
+
+`make all` rebuilds everything from the raw download. The data is fetched with `kagglehub` (no Kaggle login needed for this dataset) and falls
+back to a public GitHub mirror. Raw files are not committed: the geolocation file alone is {{ q.geolocation_mb | sig(1) }} MB, and the licence restricts redistribution.
+
+## Method notes
+
+- **Scope.** Purchases from 2017-01-01 to 2018-08-31; canceled and unavailable orders removed. The {{ q.outside_window | num }} orders outside the window sit in partial months at the start and end of data collection.
+- **Two independent implementations.** The SQL star schema and the pandas cleaning layer are written separately; tests require identical order counts, revenue, repeat rate and on-time rate.
+- **RFM.** Recency and monetary use `NTILE(5)`. Frequency uses the order count, because {{ k.one_time_share | pct }} of customers have exactly one order and a frequency quintile would be meaningless.
+- **Late delivery.** An order is late when delivered after the promised date (day grain). Effect size is reported because with {{ d.n_reviewed | num }} reviewed orders any difference is "significant".
+- **Every number is generated.** README, summaries and dashboard text are rendered from `reports/facts.json`; `tools/check_numbers.py` fails the build if a number cannot be traced.
+
+## Limitations
+
+- No cost data: the dataset has prices and freight but no product cost, so this analyses revenue, not profit.
+- Late first deliveries are linked to a lower repeat rate ({{ a.retention_vs_delivery.repeat_rate_late_first | pct(2) }} vs {{ a.retention_vs_delivery.repeat_rate_ontime_first | pct(2) }}, p = {{ a.retention_vs_delivery.p_value | sig(3) }}), but the gap is small: delivery is mainly a review-score problem, not the main reason customers do not return.
+- Impact estimates use assumed lifts; they size the opportunity, they do not forecast it.
+
+Data licence: CC BY-NC-SA 4.0 (Olist). Code licence: MIT.

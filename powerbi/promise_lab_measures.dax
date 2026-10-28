@@ -1,0 +1,22 @@
+-- OPTIONAL Power BI extension for analysts who import reports/promise_lab/state_priority.csv.
+-- Name the imported table 'PromiseState'. This is NOT a prebuilt .pbix report.
+-- The original Power BI project also includes other DAX measures in measures.dax.
+
+Promise Delivered Orders = SUM ( PromiseState[delivered_orders] )
+
+Promise Late Orders = SUM ( PromiseState[late_orders] )
+
+Promise Observed Late Rate = DIVIDE ( [Promise Late Orders], [Promise Delivered Orders] )
+
+Promise Risk Adjusted Rate =
+    DIVIDE (
+        SUMX ( PromiseState, PromiseState[risk_adjusted_rate] * PromiseState[delivered_orders] ),
+        [Promise Delivered Orders]
+    )
+
+Promise Above Benchmark States =
+    COUNTROWS ( FILTER ( PromiseState, PromiseState[above_national_wilson] = TRUE () ) )
+
+-- The original project's statewide export has only 21 of 27 states.
+-- National late rate = 6531 / 96203, not filtered SUM(late)/SUM(delivered).
+Promise National Benchmark Rate = DIVIDE ( 6531, 96203 )

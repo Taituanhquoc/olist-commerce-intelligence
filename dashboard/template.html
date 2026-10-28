@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Olist E-Commerce Analytics</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --card: #ffffff; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --header: #1f2a44; --header-ink: #ffffff;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --good: #0ca30c; --critical: #d03b3b;
+  --seq-lo: #eef5fd; --seq-hi: #0d366b; --chip: #f0efec;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --card: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --header: #111827; --header-ink: #ffffff;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --seq-lo: #1c2533; --seq-hi: #86b6ef; --chip: #2c2c2a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --card: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --header: #111827; --header-ink: #ffffff;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --seq-lo: #1c2533; --seq-hi: #86b6ef; --chip: #2c2c2a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { background: var(--header); color: var(--header-ink); padding: 18px 24px 14px; }
+header h1 { margin: 0 0 4px; font-size: 20px; font-weight: 650; }
+header p { margin: 0; font-size: 13px; opacity: .85; max-width: 1100px; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .02em; padding: 2px 8px; border-radius: 10px;
+  background: rgba(255,255,255,.14); margin-left: 8px; vertical-align: middle; }
+.bar { position: sticky; top: 0; z-index: 5; background: var(--surface); border-bottom: 1px solid var(--ring);
+  padding: 10px 24px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: end; }
+.bar label { display: flex; flex-direction: column; font-size: 11px; color: var(--ink-2); gap: 3px; }
+.bar select, .bar button, .bar input { font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--axis);
+  background: var(--card); color: var(--ink); min-width: 120px; }
+.bar button { cursor: pointer; min-width: 0; }
+.tabs { display: flex; gap: 4px; padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--ring); overflow-x: auto; }
+.tabs button { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); background: none; border: 0;
+  border-bottom: 2px solid transparent; padding: 10px 12px; cursor: pointer; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--s1); }
+main { padding: 18px 24px 32px; max-width: 1440px; margin: 0 auto; }
+section[role="tabpanel"] { display: none; }
+section[role="tabpanel"].active { display: block; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.kpi { background: var(--card); border: 1px solid var(--ring); border-radius: 10px; padding: 12px 14px; }
+.kpi .label { font-size: 12px; color: var(--ink-2); }
+.kpi .value { font-size: 24px; font-weight: 650; margin-top: 2px; }
+.kpi .note { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.grid .wide { grid-column: 1 / -1; }
+.card { background: var(--card); border: 1px solid var(--ring); border-radius: 10px; padding: 12px 14px 6px; min-width: 0; }
+.card h3 { margin: 0; font-size: 14px; font-weight: 650; }
+.card .sub { margin: 2px 0 4px; font-size: 12px; color: var(--ink-2); }
+.chart { width: 100%; height: 320px; }
+.chart.tall { height: 420px; }
+.static-note { font-size: 11px; color: var(--muted); background: var(--chip); border-radius: 6px; padding: 2px 8px; display: inline-block; margin: 2px 0 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; margin: 6px 0 10px; }
+th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--ink-2); font-weight: 600; }
+footer { padding: 16px 24px 28px; font-size: 12px; color: var(--muted); max-width: 1440px; margin: 0 auto; }
+footer a { color: var(--s1); }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr; } header, .bar, main, footer, .tabs { padding-left: 16px; padding-right: 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Olist E-Commerce: Sales, Customer and Delivery Analytics <span class="badge">REAL DATA</span></h1>
+  <p>{{HEADLINE}}</p>
+</header>
+
+<div class="bar" role="group" aria-label="Filters">
+  <label>From month <select id="f-from"></select></label>
+  <label>To month <select id="f-to"></select></label>
+  <label>Category <select id="f-cat"></select></label>
+  <label>Customer state <select id="f-state"></select></label>
+  <button id="f-reset" type="button">Reset filters</button>
+  <button id="f-theme" type="button" aria-label="Toggle dark mode">Theme</button>
+</div>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="overview" aria-selected="true">Executive Overview</button>
+  <button role="tab" data-tab="product" aria-selected="false">Product &amp; Seller</button>
+  <button role="tab" data-tab="customer" aria-selected="false">Customer (RFM + Cohort)</button>
+  <button role="tab" data-tab="delivery" aria-selected="false">Delivery &amp; Experience</button>
+</nav>
+
+<main>
+  <section role="tabpanel" id="tab-overview" class="active">
+    <div class="kpis" id="kpi-overview"></div>
+    <div class="grid">
+      <div class="card wide"><h3>Monthly revenue</h3><p class="sub">Item revenue (excludes freight), R$</p><div class="chart" id="c-rev"></div></div>
+      <div class="card"><h3>Month-on-month revenue growth</h3><p class="sub">% change vs previous month</p><div class="chart" id="c-mom"></div></div>
+      <div class="card"><h3>New customers per month</h3><p class="sub">Customers placing their first order</p><div class="chart" id="c-new"></div></div>
+      <div class="card"><h3>Payment mix</h3><p class="sub">Share of orders by primary payment type</p><div class="chart" id="c-pay"></div></div>
+      <div class="card"><h3>Average order value by payment type</h3><p class="sub">R$ per order</p><div class="chart" id="c-payaov"></div></div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="tab-product">
+    <div class="kpis" id="kpi-product"></div>
+    <div class="grid">
+      <div class="card"><h3>Top 15 categories by revenue</h3><p class="sub">Item revenue, R$ (respects all filters)</p><div class="chart tall" id="c-cat"></div></div>
+      <div class="card"><h3>Freight as % of item price, top 15 categories</h3><p class="sub">High ratios make low-price items expensive to ship</p><div class="chart tall" id="c-freight"></div></div>
+      <div class="card wide"><h3>Seller concentration (Pareto)</h3><span class="static-note">Full period, all categories: not affected by filters</span><div class="chart" id="c-pareto"></div></div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="tab-customer">
+    <span class="static-note">Customer metrics need each customer's full history, so this page shows the full analysis window and ignores filters.</span>
+    <div class="kpis" id="kpi-customer"></div>
+    <div class="grid">
+      <div class="card wide"><h3>RFM segments: share of customers vs share of revenue</h3><p class="sub">Recency and monetary scored in quintiles; frequency from order count</p><div class="chart" id="c-rfm"></div><div id="t-rfm"></div></div>
+      <div class="card wide"><h3>Cohort retention</h3><p class="sub">% of each first-purchase cohort ordering again k months later</p><div class="chart tall" id="c-cohort"></div></div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="tab-delivery">
+    <div class="kpis" id="kpi-delivery"></div>
+    <div class="grid">
+      <div class="card"><h3>Review score by delivery timing</h3><p class="sub">Days early or late against the promised date</p><div class="chart" id="c-delay"></div></div>
+      <div class="card"><h3>Share of 1-2 star reviews by delivery timing</h3><p class="sub">% of reviewed orders in each bucket</p><div class="chart" id="c-lowrev"></div></div>
+      <div class="card wide"><h3>Late-delivery rate by customer state</h3><p class="sub">States with at least 100 delivered orders in the current filter; line = overall rate</p><div class="chart" id="c-state"></div><div id="t-state"></div></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Source: Olist Brazilian E-Commerce public dataset (Kaggle, CC BY-NC-SA 4.0), real orders. Window: Jan 2017 to Aug 2018,
+  excluding canceled and unavailable orders. Built from <code>reports/facts.json</code> and the cleaned tables in
+  <a href="{{REPO_URL}}">{{REPO_URL}}</a>. Generated {{GENERATED}}.
+</footer>
+
+<script>/*PLOTLY*/</script>
+<script>const DATA = /*DATA*/;</script>
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const fmtBRL = (x) => Math.abs(x) >= 1e6 ? "R$" + (x / 1e6).toFixed(2) + "M" : Math.abs(x) >= 1e3 ? "R$" + (x / 1e3).toFixed(1) + "k" : "R$" + x.toFixed(0);
+  const fmtInt = (x) => Math.round(x).toLocaleString("en-US");
+  const fmtPct = (x, d = 1) => (100 * x).toFixed(d) + "%";
+  const M = DATA.months, C = DATA.categories, S = DATA.states;
+  const state = { from: 0, to: M.length - 1, cat: -1, st: -1, tab: "overview" };
+
+  // ---------- filters
+  function fill(sel, items, allLabel) {
+    sel.innerHTML = (allLabel ? `<option value="-1">${allLabel}</option>` : "") +
+      items.map((x, i) => `<option value="${i}">${x}</option>`).join("");
+  }
+  fill($("f-from"), M); fill($("f-to"), M);
+  fill($("f-cat"), C.map((c) => c.replace(/_/g, " ")), "All categories");
+  fill($("f-state"), S, "All states");
+  $("f-from").value = state.from; $("f-to").value = state.to;
+  const keep = (r) => r[0] >= state.from && r[0] <= state.to && (state.cat < 0 || r[1] === state.cat) && (state.st < 0 || r[2] === state.st);
+  function onFilter() {
+    state.from = +$("f-from").value; state.to = +$("f-to").value;
+    if (state.from > state.to) { [state.from, state.to] = [state.to, state.from]; $("f-from").value = state.from; $("f-to").value = state.to; }
+    state.cat = +$("f-cat").value; state.st = +$("f-state").value;
+    render();
+  }
+  ["f-from", "f-to", "f-cat", "f-state"].forEach((id) => $(id).addEventListener("change", onFilter));
+  $("f-reset").addEventListener("click", () => {
+    $("f-from").value = 0; $("f-to").value = M.length - 1; $("f-cat").value = -1; $("f-state").value = -1; onFilter();
+  });
+  $("f-theme").addEventListener("click", () => {
+    const dark = document.documentElement.getAttribute("data-theme") === "dark" ||
+      (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+    render();
+  });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+
+  // ---------- tabs
+  document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
+    state.tab = b.dataset.tab;
+    document.querySelectorAll("[data-tab]").forEach((x) => x.setAttribute("aria-selected", x === b ? "true" : "false"));
+    document.querySelectorAll("section[role=tabpanel]").forEach((s) => s.classList.toggle("active", s.id === "tab-" + state.tab));
+    render();
+  }));
+
+  // ---------- helpers
+  function group(rows, keyIdx, valIdx) {
+    const out = new Map();
+    for (const r of rows) {
+      const k = r[keyIdx];
+      let acc = out.get(k);
+      if (!acc) { acc = new Array(valIdx.length).fill(0); out.set(k, acc); }
+      valIdx.forEach((v, j) => { acc[j] += r[v]; });
+    }
+    return out;
+  }
+  function total(rows, valIdx) {
+    const acc = new Array(valIdx.length).fill(0);
+    for (const r of rows) valIdx.forEach((v, j) => { acc[j] += r[v]; });
+    return acc;
+  }
+  function kpis(el, cards) {
+    $(el).innerHTML = cards.map((c) => `<div class="kpi"><div class="label">${c[0]}</div><div class="value">${c[1]}</div>${c[2] ? `<div class="note">${c[2]}</div>` : ""}</div>`).join("");
+  }
+  function layout(extra) {
+    const base = {
+      margin: { l: 56, r: 16, t: 8, b: 40 }, paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+      font: { family: "system-ui, -apple-system, Segoe UI, sans-serif", size: 12, color: css("--ink-2") },
+      xaxis: { gridcolor: css("--grid"), linecolor: css("--axis"), zeroline: false, automargin: true },
+      yaxis: { gridcolor: css("--grid"), linecolor: css("--axis"), zeroline: false, automargin: true },
+      hoverlabel: { bgcolor: css("--card"), bordercolor: css("--axis"), font: { color: css("--ink") } },
+      showlegend: false, bargap: 0.25,
+    };
+    for (const k in extra) base[k] = (typeof extra[k] === "object" && !Array.isArray(extra[k]) && base[k]) ? Object.assign({}, base[k], extra[k]) : extra[k];
+    return base;
+  }
+  const cfg = { displayModeBar: false, responsive: true };
+  const plot = (id, traces, lay) => Plotly.react($(id), traces, layout(lay || {}), cfg);
+  const months = () => M.slice(state.from, state.to + 1);
+
+  // order cube columns: 0 month, 1 primary category, 2 state, 3 orders, 4 revenue, 5 delivered, 6 late, 7 delivery-day sum, 8 review sum, 9 review count, 10 new customers, 11 freight
+  // item cube columns:  0 month, 1 category, 2 state, 3 revenue, 4 items, 5 freight
+  // delay cube columns: 0 month, 1 primary category, 2 state, 3 bucket, 4 reviewed orders, 5 review sum, 6 low reviews
+  // pay cube columns:   0 month, 1 primary category, 2 state, 3 payment type, 4 orders, 5 revenue
+
+  function renderOverview() {
+    const rows = DATA.oc.filter(keep);
+    const [o, rev, del, late, , rs, rc, nw] = total(rows, [3, 4, 5, 6, 7, 8, 9, 10]);
+    kpis("kpi-overview", [
+      ["Revenue", fmtBRL(rev), "item prices, excl. freight"], ["Orders", fmtInt(o)], ["Average order value", o ? "R$" + (rev / o).toFixed(2) : "-"],
+      ["New customers", fmtInt(nw), "first orders in range"], ["On-time delivery", del ? fmtPct(1 - late / del) : "-"],
+      ["Average review", rc ? (rs / rc).toFixed(2) : "-", "1-5 stars"],
+    ]);
+    const g = group(rows, 0, [3, 4, 10]);
+    const idx = months().map((_, i) => state.from + i);
+    const revs = idx.map((i) => (g.get(i) || [0, 0, 0])[1]);
+    plot("c-rev", [{ x: months(), y: revs, type: "scatter", mode: "lines+markers", line: { color: css("--s1"), width: 2 }, marker: { size: 6 },
+      hovertemplate: "%{x}<br>R$%{y:,.0f}<extra></extra>" }], { yaxis: { tickprefix: "R$", tickformat: "~s" } });
+    const mom = revs.map((v, i) => (i === 0 || !revs[i - 1]) ? null : v / revs[i - 1] - 1);
+    plot("c-mom", [{ x: months(), y: mom, type: "bar", marker: { color: mom.map((v) => v < 0 ? css("--critical") : css("--s1")) },
+      hovertemplate: "%{x}<br>%{y:.1%}<extra></extra>" }], { yaxis: { tickformat: ".0%" } });
+    plot("c-new", [{ x: months(), y: idx.map((i) => (g.get(i) || [0, 0, 0])[2]), type: "bar", marker: { color: css("--s1") },
+      hovertemplate: "%{x}<br>%{y:,} new customers<extra></extra>" }], {});
+    const pr = DATA.pc.filter(keep);
+    const pg = group(pr, 3, [4, 5]);
+    const types = [...pg.keys()].sort((a, b) => pg.get(b)[0] - pg.get(a)[0]);
+    const po = types.reduce((s, t) => s + pg.get(t)[0], 0);
+    const names = types.map((t) => DATA.payTypes[t].replace(/_/g, " "));
+    plot("c-pay", [{ x: names, y: types.map((t) => pg.get(t)[0] / po), type: "bar", marker: { color: css("--s1") },
+      hovertemplate: "%{x}<br>%{y:.1%} of orders<extra></extra>" }], { yaxis: { tickformat: ".0%" } });
+    plot("c-payaov", [{ x: names, y: types.map((t) => pg.get(t)[1] / pg.get(t)[0]), type: "bar", marker: { color: css("--s1") },
+      hovertemplate: "%{x}<br>R$%{y:.2f}<extra></extra>" }], { yaxis: { tickprefix: "R$" } });
+  }
+
+  function renderProduct() {
+    const rows = DATA.ic.filter(keep);
+    const g = group(rows, 1, [3, 4, 5]);
+    const cats = [...g.keys()].sort((a, b) => g.get(b)[0] - g.get(a)[0]);
+    const tot = cats.reduce((s, c) => s + g.get(c)[0], 0);
+    const top = cats.slice(0, 15);
+    const top10 = cats.slice(0, 10).reduce((s, c) => s + g.get(c)[0], 0);
+    kpis("kpi-product", [
+      ["Item revenue", fmtBRL(tot)], ["Items sold", fmtInt(cats.reduce((s, c) => s + g.get(c)[1], 0))],
+      ["Categories with sales", fmtInt(cats.length)], ["Top-10 category share", tot ? fmtPct(top10 / tot) : "-"],
+      ["Freight / item revenue", tot ? fmtPct(cats.reduce((s, c) => s + g.get(c)[2], 0) / tot) : "-"],
+    ]);
+    const lbl = top.map((c) => C[c].replace(/_/g, " ")).reverse();
+    plot("c-cat", [{ y: lbl, x: top.map((c) => g.get(c)[0]).reverse(), type: "bar", orientation: "h", marker: { color: css("--s1") },
+      hovertemplate: "%{y}<br>R$%{x:,.0f}<extra></extra>" }], { margin: { l: 170, r: 16, t: 8, b: 40 }, xaxis: { tickprefix: "R$", tickformat: "~s" } });
+    plot("c-freight", [{ y: lbl, x: top.map((c) => g.get(c)[2] / g.get(c)[0]).reverse(), type: "bar", orientation: "h", marker: { color: css("--s2") },
+      hovertemplate: "%{y}<br>freight = %{x:.1%} of price<extra></extra>" }], { margin: { l: 170, r: 16, t: 8, b: 40 }, xaxis: { tickformat: ".0%" } });
+    const p = DATA.pareto;
+    plot("c-pareto", [{ x: p.x, y: p.y, type: "scatter", mode: "lines", line: { color: css("--s1"), width: 2 },
+      hovertemplate: "top %{x:.0%} of sellers<br>%{y:.1%} of revenue<extra></extra>" }],
+      { xaxis: { tickformat: ".0%", title: { text: "Sellers ranked by revenue (cumulative)" } }, yaxis: { tickformat: ".0%", title: { text: "Cumulative revenue" } },
+        shapes: [{ type: "line", x0: 0.1, x1: 0.1, y0: 0, y1: 1, line: { color: css("--muted"), width: 1 } }] });
+  }
+
+  function renderCustomer() {
+    const r = DATA.rfm;
+    kpis("kpi-customer", DATA.customerKpis.map((k) => [k[0], k[1]]));
+    plot("c-rfm", [
+      { x: r.segment, y: r.customer_share, name: "Share of customers", type: "bar", marker: { color: css("--s1") }, hovertemplate: "%{x}<br>%{y:.1%} of customers<extra></extra>" },
+      { x: r.segment, y: r.revenue_share, name: "Share of revenue", type: "bar", marker: { color: css("--s2") }, hovertemplate: "%{x}<br>%{y:.1%} of revenue<extra></extra>" },
+    ], { showlegend: true, legend: { orientation: "h", y: 1.12 }, yaxis: { tickformat: ".0%" }, barmode: "group" });
+    $("t-rfm").innerHTML = "<table><tr><th>Segment</th><th>Customers</th><th>Revenue</th><th>Revenue per customer</th><th>Avg days since last order</th></tr>" +
+      r.segment.map((s, i) => `<tr><td>${s}</td><td>${fmtInt(r.customers[i])}</td><td>${fmtBRL(r.revenue[i])}</td><td>R$${r.avg_revenue[i].toFixed(0)}</td><td>${r.avg_recency_days[i].toFixed(0)}</td></tr>`).join("") + "</table>";
+    const h = DATA.cohort;
+    plot("c-cohort", [{ z: h.z, x: h.x, y: h.y, type: "heatmap", colorscale: [[0, "#f4f8fe"], [0.35, "#9ec5f4"], [0.7, "#2a78d6"], [1, "#0d366b"]],
+      hovertemplate: "cohort %{y}, month %{x}<br>%{z:.2%} ordered again<extra></extra>", colorbar: { tickformat: ".1%", outlinewidth: 0 } }],
+      { xaxis: { title: { text: "Months since first purchase" }, dtick: 1 }, yaxis: { autorange: "reversed", type: "category" }, margin: { l: 70, r: 16, t: 8, b: 44 } });
+  }
+
+  function renderDelivery() {
+    const rows = DATA.oc.filter(keep);
+    const [del, late, days] = total(rows, [5, 6, 7]);
+    const drows = DATA.dc.filter(keep);
+    const b = group(drows, 3, [4, 5, 6]);
+    const lateB = [4, 5, 6], onB = [0, 1, 2, 3];
+    const agg = (ks) => ks.reduce((a, k) => { const v = b.get(k) || [0, 0, 0]; return [a[0] + v[0], a[1] + v[1], a[2] + v[2]]; }, [0, 0, 0]);
+    const L = agg(lateB), O = agg(onB);
+    kpis("kpi-delivery", [
+      ["Delivered orders", fmtInt(del)], ["On-time rate", del ? fmtPct(1 - late / del) : "-"], ["Late orders", fmtInt(late)],
+      ["Avg delivery days", del ? (days / del).toFixed(1) : "-"],
+      ["Avg review: on time", O[0] ? (O[1] / O[0]).toFixed(2) : "-"], ["Avg review: late", L[0] ? (L[1] / L[0]).toFixed(2) : "-"],
+    ]);
+    const ks = DATA.buckets.map((_, i) => i);
+    const isLate = (k) => k >= 4;
+    plot("c-delay", [{ x: DATA.buckets, y: ks.map((k) => { const v = b.get(k); return v && v[0] ? v[1] / v[0] : null; }), type: "bar",
+      marker: { color: ks.map((k) => isLate(k) ? css("--critical") : css("--s1")) }, hovertemplate: "%{x}<br>avg review %{y:.2f}<extra></extra>" }],
+      { yaxis: { range: [0, 5] } });
+    plot("c-lowrev", [{ x: DATA.buckets, y: ks.map((k) => { const v = b.get(k); return v && v[0] ? v[2] / v[0] : null; }), type: "bar",
+      marker: { color: ks.map((k) => isLate(k) ? css("--critical") : css("--s1")) }, hovertemplate: "%{x}<br>%{y:.1%} 1-2 star<extra></extra>" }],
+      { yaxis: { tickformat: ".0%" } });
+    const g = group(rows, 2, [5, 6, 7, 8, 9]);
+    const sts = [...g.keys()].filter((s) => g.get(s)[0] >= 100).sort((a, c) => g.get(c)[1] / g.get(c)[0] - g.get(a)[1] / g.get(a)[0]);
+    const nat = del ? late / del : 0;
+    plot("c-state", [{ x: sts.map((s) => S[s]), y: sts.map((s) => g.get(s)[1] / g.get(s)[0]), type: "bar",
+      marker: { color: sts.map((s) => g.get(s)[1] / g.get(s)[0] > nat ? css("--critical") : css("--s1")) },
+      hovertemplate: "%{x}<br>%{y:.1%} late<extra></extra>" }],
+      { yaxis: { tickformat: ".0%" }, shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: nat, y1: nat, line: { color: css("--muted"), width: 1 } }] });
+    $("t-state").innerHTML = "<table><tr><th>State</th><th>Delivered</th><th>Late rate</th><th>Avg days</th><th>Avg review</th></tr>" +
+      sts.slice(0, 8).map((s) => { const v = g.get(s); return `<tr><td>${S[s]}</td><td>${fmtInt(v[0])}</td><td>${fmtPct(v[1] / v[0])}</td><td>${(v[2] / v[0]).toFixed(1)}</td><td>${v[4] ? (v[3] / v[4]).toFixed(2) : "-"}</td></tr>`; }).join("") + "</table>";
+  }
+
+  function render() {
+    ({ overview: renderOverview, product: renderProduct, customer: renderCustomer, delivery: renderDelivery })[state.tab]();
+  }
+  render();
+})();
+</script>
+</body>
+</html>

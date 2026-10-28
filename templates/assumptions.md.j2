@@ -1,0 +1,33 @@
+# Assumptions and cleaning decisions
+
+Generated from `reports/cleaning_log.csv` and `reports/audit_checks.csv`. Every cleaning step lists its row impact.
+
+## Scope and definitions
+
+- **Analysis window:** orders purchased from 2017-01-01 up to 2018-08-31 inclusive. Earlier and later months are partial data-collection months.
+- **Revenue:** sum of item `price`; freight is reported separately. Payments are not used for revenue because they include installment interest.
+- **Order in scope:** status is not `canceled` or `unavailable`, and the order has at least one item.
+- **Customer:** `customer_unique_id` (Olist issues a new `customer_id` per order).
+- **Late:** delivered to the customer on a later calendar day than `order_estimated_delivery_date`.
+- **Review:** the latest answered review per order.
+- **RFM snapshot:** 2018-09-01. Recency and monetary scored with `NTILE(5)`; frequency scored from the order count.
+- **Impact assumptions:** see the *Impact model* sheet of the Excel workbook; all inputs are also stored in `reports/facts.json` under `analysis.assumptions`.
+
+## Cleaning log (Python layer, `src/clean.py`)
+
+| Step | Table | Action | Rows before | Rows after | Rows affected | Why |
+|---|---|---|---|---|---|---|
+{% for r in log -%}
+| {{ r.step }} | {{ r.table }} | {{ r.action }} | {{ r.rows_before | num }} | {{ r.rows_after | num }} | {{ r.rows_affected | num }} | {{ r.decision }} |
+{% endfor %}
+The SQL staging layer (`sql/01_staging_clean.sql`) applies the same rules with flags instead of deletes; `tests/test_metrics.py`
+checks that both layers give the same orders, revenue, repeat rate and on-time rate.
+
+## Data audit (raw layer, `src/audit.py`)
+
+| Check | Count |
+|---|---|
+{% for c in checks -%}
+| {{ c.check }} | {{ c.count | num }} |
+{% endfor %}
+Column-level profile (nulls, distinct values, ranges, IQR outliers): `reports/audit_table.csv`.

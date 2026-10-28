@@ -1,0 +1,43 @@
+{%- set k = a.kpi -%}{%- set t = a.trend -%}{%- set d = a.delivery -%}{%- set i = a.impact -%}{%- set as_ = a.assumptions -%}{%- set rv = a.retention_vs_delivery -%}
+# Interview talking points
+
+## 60-second pitch
+
+"I analysed {{ k.orders | num }} real orders from Olist, a Brazilian marketplace, to answer why growth was slowing. The YoY number looked great,
++{{ t.yoy_revenue_growth | pct(0) }}, but that was ramp-up. The 2018 run-rate was flat. I built a DuckDB star schema in SQL, cohort and RFM analysis, and a
+Mann-Whitney test on delivery delay versus review score. Two things came out. First, only {{ k.repeat_rate | pct }} of customers ever order twice, so the
+business is pure acquisition, and acquisition had flattened. Second, late orders average {{ d.late_avg_review | sig }} stars against {{ d.ontime_avg_review | sig }}, and the
+{{ a.state.n_target_states }} worst states produce {{ a.state.target_share_of_late | pct(0) }} of late orders from {{ a.state.target_share_of_delivered | pct(0) }} of deliveries. I sized three actions, a second-purchase programme, delivery fixes and cross-sell, at about {{ i.total_revenue | brl }}
+a year, with every assumption visible in an Excel model. The dashboard is live on GitHub Pages and every number in the README is generated from one facts file."
+
+## Five hard questions
+
+**1. Your revenue impact is only {{ i.total_share_of_annual | pct }} of revenue. Why should anyone care?**
+Because I sized it with conservative, explicit lifts ({{ as_.repeat_lift_pp | sig(1) }} pp repeat rate, {{ as_.basket_lift_pp | sig(1) }} pp multi-item share) instead of picking
+numbers that look impressive. The point of the analysis is the diagnosis: with {{ k.one_time_share | pct(0) }} one-time buyers, retention is the lever, and each
+extra point of repeat rate is worth about {{ i.a1_per_pp | brl }} a year. If a test shows a bigger lift, the model in the workbook updates.
+
+**2. Late delivery and bad reviews: is that causal?**
+Not proven. It is observational. The effect is large (rank-biserial {{ d.rank_biserial | sig }}) and dose-response shaped: the later the order, the worse the review
+({{ d.late8_avg_review | sig }} stars at 8+ days late). Confounders are possible, such as heavy products being both slow and more often damaged. To prove it I would test
+honest delivery estimates in a few states and compare review scores.
+
+**3. Why not use a frequency quintile in RFM like the textbook?**
+Because {{ k.one_time_share | pct }} of customers have exactly one order. `NTILE(5)` on frequency would split identical customers into different scores
+by tie order. I scored frequency from the order count instead and documented it in the SQL header.
+
+**4. How do you know your numbers are right?**
+Three checks. The SQL star schema and the pandas cleaning layer are independent implementations and the tests require identical results (revenue
+{{ a.crosscheck.sql_revenue | brl(2) }} in both). The Excel workbook is recalculated by Excel and its KPI cells must match `facts.json`. And `check_numbers.py`
+fails the build if any number in the README or dashboard text is not in `facts.json`.
+
+**5. Delivery fixes barely move revenue in your model. Did you get that wrong?**
+No, that was a real result I chose to report. A late first order lowers repeat rate only from {{ rv.repeat_rate_ontime_first | pct(2) }} to
+{{ rv.repeat_rate_late_first | pct(2) }} (p = {{ rv.p_value | sig(3) }}), and repeat is rare for everyone. So delivery is a review-score and reputation problem,
+worth {{ i.a2_late_orders_avoided | num }} fewer late orders a year, not the main retention problem. Overstating it would have sent the budget to the wrong place.
+
+## Three things I would do differently
+
+1. **Get cost data.** Without product cost this is a revenue analysis; profit by category would change the category priorities.
+2. **Use survival analysis for repeat purchase.** A time-to-second-order model would handle the late cohorts' short observation window better than cohort tables.
+3. **Join reviews text.** The review comments (Portuguese) would show *why* low scores happen beyond lateness, such as wrong item or damage.

@@ -1,0 +1,88 @@
+// measures.dax - all measures for the Olist report.
+// Create a blank table named _Measures (Enter data, no rows), then add each block below as a New measure.
+// Format strings are noted on each comment line. Tables: fact_order_items, fact_orders, dim_date, dim_customer,
+// dim_product, dim_seller (see data_model.md). Every measure respects the slicers on date, category and state.
+
+// Sum of item prices for in-scope orders, freight excluded. Format: R$ #,##0
+Revenue =
+SUM ( fact_order_items[price] )
+
+// Distinct in-scope orders. Format: #,##0
+Orders =
+DISTINCTCOUNT ( fact_orders[order_id] )
+
+// Average order value. Format: R$ #,##0.00
+AOV =
+DIVIDE ( [Revenue], [Orders] )
+
+// Revenue in the previous month, used by MoM %. Format: R$ #,##0
+Revenue PM =
+CALCULATE ( [Revenue], DATEADD ( dim_date[date_key], -1, MONTH ) )
+
+// Month-on-month revenue change. Format: 0.0%
+MoM % =
+VAR prev = [Revenue PM]
+RETURN
+    IF ( NOT ISBLANK ( prev ), DIVIDE ( [Revenue] - prev, prev ) )
+
+// Revenue in the same period last year. Format: R$ #,##0
+Revenue PY =
+CALCULATE ( [Revenue], SAMEPERIODLASTYEAR ( dim_date[date_key] ) )
+
+// Year-on-year revenue change. Format: 0.0%
+YoY % =
+VAR prev = [Revenue PY]
+RETURN
+    IF ( NOT ISBLANK ( prev ), DIVIDE ( [Revenue] - prev, prev ) )
+
+// Customers with an order in the current filter context. Format: #,##0
+Customers =
+DISTINCTCOUNT ( fact_orders[customer_unique_id] )
+
+// Share of customers with two or more orders. Ignores the date filter on purpose: repeat behaviour needs full history.
+// Format: 0.00%
+Repeat Purchase Rate =
+VAR per_customer =
+    CALCULATETABLE (
+        SUMMARIZE ( fact_orders, fact_orders[customer_unique_id], "n", COUNTROWS ( fact_orders ) ),
+        REMOVEFILTERS ( dim_date )
+    )
+RETURN
+    DIVIDE ( COUNTROWS ( FILTER ( per_customer, [n] >= 2 ) ), COUNTROWS ( per_customer ) )
+
+// Average days from purchase to delivery, delivered orders only. Format: 0.0
+Avg Delivery Days =
+CALCULATE ( AVERAGE ( fact_orders[delivery_days] ), fact_orders[is_delivered] = TRUE () )
+
+// Delivered on or before the promised date / delivered orders. Format: 0.0%
+On-Time % =
+VAR delivered = CALCULATE ( COUNTROWS ( fact_orders ), fact_orders[is_delivered] = TRUE () )
+VAR late = CALCULATE ( COUNTROWS ( fact_orders ), fact_orders[is_late] = TRUE () )
+RETURN
+    DIVIDE ( delivered - late, delivered )
+
+// Mean of the latest review per order. Format: 0.00
+Avg Review =
+AVERAGE ( fact_orders[review_score] )
+
+// Cumulative revenue from the first date in the model up to the current date. Format: R$ #,##0
+Running Total Revenue =
+CALCULATE (
+    [Revenue],
+    FILTER ( ALL ( dim_date[date_key] ), dim_date[date_key] <= MAX ( dim_date[date_key] ) )
+)
+
+// Rank of the current category by revenue across all categories. Format: 0
+Rank by Category =
+IF (
+    HASONEVALUE ( dim_product[category] ),
+    RANKX ( ALL ( dim_product[category] ), [Revenue], , DESC, DENSE )
+)
+
+// Late orders (helper for the delivery page). Format: #,##0
+Late Orders =
+CALCULATE ( COUNTROWS ( fact_orders ), fact_orders[is_late] = TRUE () )
+
+// Share of revenue from the current category. Format: 0.0%
+Category Share % =
+DIVIDE ( [Revenue], CALCULATE ( [Revenue], ALL ( dim_product[category] ) ) )
