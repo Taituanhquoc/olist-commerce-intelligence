@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'transfer_parts/**'
+      - 'import_ready.txt'
   workflow_dispatch:
 permissions:
   contents: write
@@ -33,11 +34,13 @@ jobs:
                   if info.is_dir() or not info.filename.startswith(root): continue
                   rel=Path(info.filename[len(root):])
                   if not rel.parts or '..' in rel.parts: raise RuntimeError('Invalid archive path')
+                  if rel.parts[0] == '.github': continue
                   dest=Path('.')/rel
                   dest.parent.mkdir(parents=True,exist_ok=True)
                   with z.open(info) as src, open(dest,'wb') as dst: shutil.copyfileobj(src,dst)
           archive.unlink()
           shutil.rmtree('transfer_parts')
+          Path('import_ready.txt').unlink(missing_ok=True)
           PY
       - name: Publish complete portfolio
         run: |
