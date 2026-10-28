@@ -2,7 +2,7 @@ name: Import complete Olist portfolio
 on:
   push:
     paths:
-      - 'project_bundle.zip'
+      - 'transfer_parts/**'
   workflow_dispatch:
 permissions:
   contents: write
@@ -19,7 +19,11 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile
           import shutil
+          import base64
+          chunks=sorted(Path('transfer_parts').glob('part_*.b64'))
+          if not chunks: raise RuntimeError('No upload parts found')
           archive=Path('project_bundle.zip')
+          archive.write_bytes(base64.b64decode(''.join(p.read_text().strip() for p in chunks)))
           with ZipFile(archive) as z:
               paths=[p for p in z.namelist() if p and not p.endswith('/')]
               roots={p.split('/')[0] for p in paths}
@@ -33,6 +37,7 @@ jobs:
                   dest.parent.mkdir(parents=True,exist_ok=True)
                   with z.open(info) as src, open(dest,'wb') as dst: shutil.copyfileobj(src,dst)
           archive.unlink()
+          shutil.rmtree('transfer_parts')
           PY
       - name: Publish complete portfolio
         run: |
